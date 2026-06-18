@@ -17,21 +17,21 @@ const roadTiles = [
   tile(4, 1, 'tiles/road/roadNS.png', 'road'),
   tile(5, 1, 'tiles/road/roadNS.png', 'road'),
   tile(6, 1, 'tiles/road/roadNS.png', 'road'),
-  tile(7, 1, 'tiles/road/roadSW.png', 'road'),  // corner W→S
+  tile(7, 1, 'tiles/road/roadNW.png', 'road'),  // corner W→S (left)
 
   // Col 7 (vertical segment): downward (vertical = EW sprite)
   tile(7, 2, 'tiles/road/roadEW.png', 'road'),
-  tile(7, 3, 'tiles/road/roadNW.png', 'road'),  // corner N→W
+  tile(7, 3, 'tiles/road/roadNE.png', 'road'),  // corner N→W (top)
 
   // Row 3 (middle, col 7→3): leftward (horizontal = NS sprite)
   tile(6, 3, 'tiles/road/roadNS.png', 'road'),
   tile(5, 3, 'tiles/road/roadNS.png', 'road'),
   tile(4, 3, 'tiles/road/roadNS.png', 'road'),
-  tile(3, 3, 'tiles/road/roadES.png', 'road'),  // corner E→S
+  tile(3, 3, 'tiles/road/roadSW.png', 'road'),  // corner E→S (bottom)
 
   // Col 3 (vertical segment): downward (vertical = EW sprite)
   tile(3, 4, 'tiles/road/roadEW.png', 'road'),
-  tile(3, 5, 'tiles/road/roadNE.png', 'road'),  // corner N→E
+  tile(3, 5, 'tiles/road/roadES.png', 'road'),  // corner N→E (right)
 
   // Row 5 (bottom, col 3→7): rightward (horizontal = NS sprite)
   tile(4, 5, 'tiles/road/roadNS.png', 'road'),
