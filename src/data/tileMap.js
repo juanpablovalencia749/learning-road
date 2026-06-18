@@ -3,8 +3,8 @@ const TILE_H = 65
 const COLS = 10
 const ROWS = 8
 
-function tile(col, row, sprite, type = 'grass') {
-  return { col, row, sprite, type }
+function tile(col, row, sprite, type = 'grass', options = {}) {
+  return { col, row, sprite, type, elevation: type === 'terrain' ? 1 : 0, ...options }
 }
 
 // Road tiles — zigzag path top to bottom
@@ -40,14 +40,33 @@ const roadTiles = [
   tile(7, 5, 'tiles/road/roadNS.png', 'road'),
 ]
 
-// Water + beach at bottom-left
-const waterFeatures = [
-  tile(0, 7, 'tiles/water/water.png', 'water'),
-  tile(1, 7, 'tiles/water/water.png', 'water'),
+// Logical terrain layers. Sprites are resolved in Map.js from neighbours so internal
+// borders are not drawn between tiles that belong to the same surface.
+export const terrainHeightMap = [
+  [1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+  [1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+  [0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+  [0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+  [0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
+  [0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
 ]
-const beach = [
-  tile(0, 6, 'tiles/beach/beachS.png', 'beach'),
-  tile(1, 6, 'tiles/beach/beachS.png', 'beach'),
+
+export const waterCells = [
+  [0, 6], [0, 7], [1, 7],
+]
+
+export const riverCells = [
+  [1, 3], [1, 4], [1, 5], [1, 6],
+]
+
+export const beachCells = [
+  [0, 5], [1, 6], [2, 6],
+]
+
+const bridgeFeatures = [
+  tile(1, 5, 'tiles/bridge/bridgeNS.png', 'bridge'),
 ]
 
 // Buildings at strategic spots
@@ -62,6 +81,9 @@ const buildings = [
   tile(8, 5, 'buildings/buildingTiles_055.png', 'building'),
   tile(2, 7, 'buildings/buildingTiles_060.png', 'building'),
   tile(7, 7, 'buildings/buildingTiles_072.png', 'building'),
+  tile(4, 0, 'buildings/buildingTiles_081.png', 'building'),
+  tile(9, 2, 'buildings/buildingTiles_096.png', 'building'),
+  tile(0, 5, 'buildings/buildingTiles_104.png', 'building'),
 ]
 
 // Trees scattered naturally
@@ -80,6 +102,9 @@ const trees = [
   tile(9, 4, 'tiles/trees/coniferTall.png', 'tree'),
   tile(4, 6, 'tiles/trees/coniferShort.png', 'tree'),
   tile(8, 6, 'tiles/trees/treeAltTall.png', 'tree'),
+  tile(3, 6, 'tiles/trees/treeAltShort.png', 'tree'),
+  tile(6, 6, 'tiles/trees/coniferAltShort.png', 'tree'),
+  tile(9, 6, 'tiles/trees/coniferAltTall.png', 'tree'),
 ]
 
 export const GRASS_COLOR = '#84ac46'
@@ -153,11 +178,41 @@ export const groundClutter = [
   { col: 9, row: 7, type: 'leaf', size: 4, opacity: 0.2 },
 ]
 
-export const decorations = [...roadTiles, ...waterFeatures, ...beach, ...buildings, ...trees]
+export const decorations = [
+  ...roadTiles,
+  ...bridgeFeatures,
+  ...buildings,
+  ...trees,
+]
 
 export function getSpritePaths() {
   const paths = new Set()
   paths.add('tiles/terrain/grassWhole.png')
+  paths.add('tiles/terrain/grass.png')
+  ;[
+    'tiles/terrain/hillE.png',
+    'tiles/terrain/hillN.png',
+    'tiles/terrain/hillS.png',
+    'tiles/terrain/hillW.png',
+    'tiles/terrain/hillNE.png',
+    'tiles/terrain/hillNW.png',
+    'tiles/terrain/hillES.png',
+    'tiles/terrain/hillSW.png',
+    'tiles/water/water.png',
+    'tiles/water/waterN.png',
+    'tiles/water/waterS.png',
+    'tiles/water/waterE.png',
+    'tiles/water/waterW.png',
+    'tiles/water/waterNE.png',
+    'tiles/water/waterNW.png',
+    'tiles/water/waterES.png',
+    'tiles/water/waterSW.png',
+    'tiles/beach/beachS.png',
+    'tiles/beach/beachW.png',
+    'tiles/beach/beachSW.png',
+    'tiles/river/riverNS.png',
+    'tiles/river/riverSW.png',
+  ].forEach(path => paths.add(path))
   decorations.forEach(d => paths.add(d.sprite))
   return [...paths]
 }

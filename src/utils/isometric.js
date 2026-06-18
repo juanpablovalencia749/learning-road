@@ -1,11 +1,11 @@
 export const TILE_W = 100
-export const TILE_H = 65
+export const TILE_H = 48
 export const HALF_W = TILE_W / 2
 export const HALF_H = TILE_H / 2
 export const MAP_COLS = 10
 export const MAP_ROWS = 8
 export const OFFSET_X = 375
-export const OFFSET_Y = 0
+export const OFFSET_Y = 65
 
 export function tileToScreen(col, row) {
   return {
@@ -23,8 +23,8 @@ export function screenToTile(x, y) {
   }
 }
 
-export function zOrder(col, row) {
-  return col + row
+export function zOrder(col, row, height = 0) {
+  return col + row + height * 0.1
 }
 
 export function isInBounds(col, row) {
