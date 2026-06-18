@@ -57,17 +57,11 @@ export const waterCells = [
   [0, 6], [0, 7], [1, 7],
 ]
 
-export const riverCells = [
-  [1, 3], [1, 4], [1, 5], [1, 6],
-]
+export const riverCells = []
 
-export const beachCells = [
-  [0, 5], [1, 6], [2, 6],
-]
+export const beachCells = []
 
-const bridgeFeatures = [
-  tile(1, 5, 'tiles/bridge/bridgeNS.png', 'bridge'),
-]
+const bridgeFeatures = []
 
 // Buildings at strategic spots
 const buildings = [
@@ -202,7 +196,7 @@ export function getSpritePaths() {
     'tiles/water/waterNW.png',
     'tiles/water/waterES.png',
     'tiles/water/waterSW.png',
-    'tiles/beach/beachS.png',
+    // 'tiles/beach/beachS.png',
     'tiles/beach/beachW.png',
     'tiles/beach/beachSW.png',
     'tiles/river/riverNS.png',

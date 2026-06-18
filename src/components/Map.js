@@ -119,9 +119,8 @@ function getRiverSprite(col, row) {
   const sWater = row < ROWS - 1 && isWater(col, row + 1)
   const wWater = col > 0 && isWater(col - 1, row)
 
-  if (nRiver && (sRiver || sWater)) return 'tiles/river/riverNS.png'
   if (nRiver && sWater && wWater) return 'tiles/river/riverSW.png'
-  if (nRiver && sWater) return 'tiles/river/riverNS.png'
+  if (nRiver && (sRiver || sWater)) return 'tiles/river/riverNS.png'
 
   return 'tiles/river/riverNS.png'
 }
@@ -163,7 +162,7 @@ function getFlatTileHeight(sprite) {
 
 const WALL_H = 48
 
-function addEdgeWallSegments(svg, col, row, pos, hw, hh) {
+function addEdgeWallSegments(svg, col, row, pos, hw, hh, gradientId = 'wall-grad') {
   const isLeft = col === 0
   const isRight = col === COLS - 1
   const isTop = row === 0
@@ -206,7 +205,7 @@ function addEdgeWallSegments(svg, col, row, pos, hw, hh) {
     const poly = createSvgElement('polygon')
     const points = pts.map(p => `${(pos.x + p[0]).toFixed(1)},${(pos.y + p[1]).toFixed(1)}`).join(' ')
     poly.setAttribute('points', points)
-    poly.setAttribute('fill', 'url(#wall-grad)')
+    poly.setAttribute('fill', `url(#${gradientId})`)
     poly.setAttribute('stroke', '#3a6a1e')
     poly.setAttribute('stroke-width', '1')
     svg.appendChild(poly)
@@ -304,6 +303,11 @@ class MapView {
         <stop offset="25%" stop-color="#7a623f"/>
         <stop offset="100%" stop-color="#3a2510"/>
       </linearGradient>
+      <linearGradient id="wall-grad-water" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#2a8aaa"/>
+        <stop offset="30%" stop-color="#1a5a7a"/>
+        <stop offset="100%" stop-color="#0a2a4a"/>
+      </linearGradient>
     `
     svg.appendChild(defs)
 
@@ -400,7 +404,7 @@ class MapView {
         svg.appendChild(g)
       }
 
-      addEdgeWallSegments(svg, col, row, pos, hw, hh)
+      addEdgeWallSegments(svg, col, row, pos, hw, hh, (waterSprite || riverSprite) ? 'wall-grad-water' : undefined)
 
       appendTileImage('tiles/terrain/grassWhole.png')
 
