@@ -95,13 +95,16 @@ function getWaterSprite(col, row) {
 
   if (land.length === 0) return 'tiles/water/water.png'
 
-  if (land.length === 1) return `tiles/water/water${land[0]}.png`
+  if (land.length === 1) {
+    const r90 = { N: 'E', S: 'W', E: 'S', W: 'N' }
+    return `tiles/water/water${r90[land[0]]}.png`
+  }
 
   if (land.length === 2) {
-    if (land.includes('N') && land.includes('E')) return 'tiles/water/waterNE.png'
-    if (land.includes('N') && land.includes('W')) return 'tiles/water/waterNW.png'
-    if (land.includes('E') && land.includes('S')) return 'tiles/water/waterES.png'
-    if (land.includes('S') && land.includes('W')) return 'tiles/water/waterSW.png'
+    if (land.includes('N') && land.includes('E')) return 'tiles/water/waterES.png'
+    if (land.includes('N') && land.includes('W')) return 'tiles/water/waterNE.png'
+    if (land.includes('E') && land.includes('S')) return 'tiles/water/waterSW.png'
+    if (land.includes('S') && land.includes('W')) return 'tiles/water/waterNW.png'
     return 'tiles/water/water.png'
   }
 
@@ -150,6 +153,64 @@ function getTerrainSpriteHeight(sprite) {
   if (name === 'hillS' || name === 'hillW' || name === 'hillSW') return 80
   if (name === 'slopeE' || name === 'slopeN') return 58
   return 65
+}
+
+function getFlatTileHeight(sprite) {
+  const short = ['water.png','waterS.png','waterW.png','waterNW.png','waterSW.png',
+                 'beachS.png','beachW.png','beachNE.png']
+  return short.includes(sprite?.split('/').pop()) ? 58 : 65
+}
+
+const WALL_H = 48
+
+function addEdgeWallSegments(svg, col, row, pos, hw, hh) {
+  const isLeft = col === 0
+  const isRight = col === COLS - 1
+  const isTop = row === 0
+  const isBottom = row === ROWS - 1
+  if (!isLeft && !isRight && !isTop && !isBottom) return
+
+  const wallDefs = []
+
+  if (isLeft || isTop) {
+    wallDefs.push([
+      [-hw, 0], [0, -hh],
+      [0, -hh + WALL_H], [-hw, WALL_H],
+    ])
+  }
+  if (isRight || isTop) {
+    wallDefs.push([
+      [0, -hh], [hw, 0],
+      [hw, WALL_H], [0, -hh + WALL_H],
+    ])
+  }
+  if (isRight || isBottom) {
+    wallDefs.push([
+      [hw, 0], [0, hh],
+      [0, hh + WALL_H], [hw, WALL_H],
+    ])
+  }
+  if (isLeft || isBottom) {
+    wallDefs.push([
+      [0, hh], [-hw, 0],
+      [-hw, WALL_H], [0, hh + WALL_H],
+    ])
+  }
+
+  const seen = new Set()
+  wallDefs.forEach(pts => {
+    const key = pts.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join('|')
+    if (seen.has(key)) return
+    seen.add(key)
+
+    const poly = createSvgElement('polygon')
+    const points = pts.map(p => `${(pos.x + p[0]).toFixed(1)},${(pos.y + p[1]).toFixed(1)}`).join(' ')
+    poly.setAttribute('points', points)
+    poly.setAttribute('fill', 'url(#wall-grad)')
+    poly.setAttribute('stroke', '#3a6a1e')
+    poly.setAttribute('stroke-width', '1')
+    svg.appendChild(poly)
+  })
 }
 
 const overlayTypes = new Set(['road', 'bridge'])
@@ -235,9 +296,14 @@ class MapView {
         <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
       </radialGradient>
       <radialGradient id="ambient-shadow">
-        <stop offset="0%" stop-color="rgba(0,0,0,0.07)"/>
-        <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
-      </radialGradient>
+          <stop offset="0%" stop-color="rgba(0,0,0,0.07)"/>
+          <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+        </radialGradient>
+      <linearGradient id="wall-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#4a7a28"/>
+        <stop offset="25%" stop-color="#7a623f"/>
+        <stop offset="100%" stop-color="#3a2510"/>
+      </linearGradient>
     `
     svg.appendChild(defs)
 
@@ -334,11 +400,13 @@ class MapView {
         svg.appendChild(g)
       }
 
+      addEdgeWallSegments(svg, col, row, pos, hw, hh)
+
       appendTileImage('tiles/terrain/grassWhole.png')
 
       if (terrainRelief) appendTileImage(terrainRelief, { clip: false, height: getTerrainSpriteHeight(terrainRelief) })
-      if (beachSprite) appendTileImage(beachSprite)
-      if (waterSprite) appendTileImage(waterSprite)
+      if (beachSprite) appendTileImage(beachSprite, { height: getFlatTileHeight(beachSprite) })
+      if (waterSprite) appendTileImage(waterSprite, { height: getFlatTileHeight(waterSprite) })
       if (riverSprite) appendTileImage(riverSprite)
 
       // Subtle grass variation patches for organic depth
@@ -531,7 +599,7 @@ class MapView {
           decoImg.setAttribute('width', String(treeW))
           decoImg.setAttribute('height', String(treeH))
         } else {
-          const decoH = TILE_H + hh
+          const decoH = 97.5
           decoImg.setAttribute('x', (-hw).toFixed(1))
           decoImg.setAttribute('y', (-decoH + hh).toFixed(1))
           decoImg.setAttribute('width', String(TILE_W))
