@@ -79,11 +79,6 @@ const buildings = [
   tile(8, 4, 'buildings/buildingTiles_030.png', 'building'),
   tile(2, 5, 'buildings/buildingTiles_042.png', 'building'),
   tile(8, 5, 'buildings/buildingTiles_055.png', 'building'),
-  tile(2, 7, 'buildings/buildingTiles_060.png', 'building'),
-  tile(7, 7, 'buildings/buildingTiles_072.png', 'building'),
-  tile(4, 0, 'buildings/buildingTiles_081.png', 'building'),
-  tile(9, 2, 'buildings/buildingTiles_096.png', 'building'),
-  tile(0, 5, 'buildings/buildingTiles_104.png', 'building'),
 ]
 
 // Trees scattered naturally
