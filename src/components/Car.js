@@ -19,7 +19,7 @@ class Car {
   constructor() {
     this.element = document.createElement('div')
     this.element.className = 'car'
-    this.element.style.width = '90px'
+    this.element.style.width = '32px'
 
     this.body = document.createElement('div')
     this.body.className = 'car-body'

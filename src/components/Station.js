@@ -12,7 +12,7 @@ const lucideMap = {
   Container, RadioTower,
 }
 
-function lucideSvg(name, size = 28) {
+function lucideSvg(name, size = 19) {
   const icon = lucideMap[name]
   if (!icon) return ''
   const el = createElement(icon)
