@@ -4,6 +4,24 @@ import { stations } from '../data/stations.js'
 import { car } from './Car.js'
 import Station from './Station.js'
 import { computeCubicControlPoints, cubicBezier } from '../utils/bezier.js'
+import { decorations, COLS, ROWS, terrainDetails, groundClutter } from '../data/tileMap.js'
+import { tileToScreen, zOrder, TILE_W, TILE_H } from '../utils/isometric.js'
+
+const tileUrlMap = import.meta.glob('../assets/**/*.png', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+})
+
+const urlLookup = {}
+for (const [key, url] of Object.entries(tileUrlMap)) {
+  const relativePath = key.replace('../assets/', '')
+  urlLookup[relativePath] = url
+}
+
+function resolveTileUrl(path) {
+  return urlLookup[path] || path
+}
 
 class MapView {
   constructor() {
@@ -35,7 +53,6 @@ class MapView {
 
     this.renderScenery(completed)
     this.renderPath(completed)
-    this.renderSignage()
     this.renderStations()
     this.placeCar(completed)
 
@@ -55,136 +72,298 @@ class MapView {
     svg.setAttribute('preserveAspectRatio', 'xMidYMid meet')
     svg.style.transform = 'translateX(0px)'
 
-    const completedCount = completed.length
-    const progress = Math.min(completedCount / stations.length, 1)
+    const hw = TILE_W / 2
+    const hh = TILE_H / 2
 
-    // Mountains far layer
-    const m1 = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-    m1.setAttribute('d', 'M-50,500 L60,240 L160,340 L260,180 L380,300 L480,220 L580,310 L680,160 L780,270 L850,500 Z')
-    m1.setAttribute('fill', '#1e293b')
-    m1.setAttribute('stroke', '#1e293b')
-    m1.setAttribute('stroke-width', '8')
-    m1.setAttribute('stroke-linejoin', 'round')
-    m1.setAttribute('opacity', '0.45')
-    svg.appendChild(m1)
+    // --- defs: clip path, filters, gradients ---
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs')
+    defs.innerHTML = `
+      <clipPath id="iso-clip">
+        <polygon points="0,${-hh - 0.5} ${hw + 0.5},0 0,${hh + 0.5} ${-hw - 0.5},0"/>
+      </clipPath>
+      <filter id="grass-noise" x="-20%" y="-20%" width="140%" height="140%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="3" result="noise"/>
+        <feColorMatrix type="matrix" values="0 0 0 0 0.3 0 0 0 0 0.35 0 0 0 0 0.2 0 0 0 0.08 0" in="noise"/>
+      </filter>
+      <linearGradient id="sunlight" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="rgba(255,255,255,0.03)"/>
+        <stop offset="100%" stop-color="rgba(0,0,0,0.04)"/>
+      </linearGradient>
+      <radialGradient id="contact-shadow">
+        <stop offset="0%" stop-color="rgba(0,0,0,0.55)"/>
+        <stop offset="45%" stop-color="rgba(0,0,0,0.1)"/>
+        <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+      </radialGradient>
+      <radialGradient id="ambient-shadow">
+        <stop offset="0%" stop-color="rgba(0,0,0,0.07)"/>
+        <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+      </radialGradient>
+    `
+    svg.appendChild(defs)
 
-    const m2 = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-    m2.setAttribute('d', 'M-30,500 L100,300 L200,380 L320,240 L440,330 L540,260 L660,320 L740,200 L820,280 L860,500 Z')
-    m2.setAttribute('fill', '#1e293b')
-    m2.setAttribute('stroke', '#1e293b')
-    m2.setAttribute('stroke-width', '8')
-    m2.setAttribute('stroke-linejoin', 'round')
-    m2.setAttribute('opacity', '0.3')
-    svg.appendChild(m2)
+    const decoMap = {}
+    decorations.forEach(d => { decoMap[`${d.col},${d.row}`] = d })
 
-    // City skyline (medium layer)
-    const skyline = document.createElementNS('http://www.w3.org/2000/svg', 'g')
-    skyline.setAttribute('opacity', '0.25')
-    const buildings = [
-      [20, 380, 30, 120], [55, 380, 22, 80], [85, 370, 35, 130],
-      [140, 390, 28, 110], [175, 385, 20, 60], [210, 380, 32, 120],
-      [360, 390, 25, 110], [390, 380, 30, 90], [425, 385, 22, 70],
-      [560, 390, 34, 110], [600, 380, 26, 80], [635, 385, 30, 120],
-      [680, 390, 24, 60], [710, 380, 35, 100], [750, 385, 28, 130],
-    ]
-    buildings.forEach(([x, y, w, h]) => {
-      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
-      rect.setAttribute('x', String(x))
-      rect.setAttribute('y', String(y))
-      rect.setAttribute('width', String(w))
-      rect.setAttribute('height', String(h))
-      rect.setAttribute('rx', '4')
-      rect.setAttribute('fill', '#1e293b')
-      skyline.appendChild(rect)
+    const detailMap = {}
+    terrainDetails.forEach(d => { detailMap[`${d.col},${d.row}`] = d })
+
+    const clutterByTile = {}
+    groundClutter.forEach(c => {
+      const key = `${c.col},${c.row}`
+      if (!clutterByTile[key]) clutterByTile[key] = []
+      clutterByTile[key].push(c)
     })
-    svg.appendChild(skyline)
 
-    // Trees (near layer)
-    const trees = document.createElementNS('http://www.w3.org/2000/svg', 'g')
-    trees.setAttribute('opacity', '0.35')
-    const treePositions = [
-      [50, 410], [130, 430], [220, 400], [280, 420],
-      [350, 410], [430, 390], [510, 420], [590, 400],
-      [660, 410], [730, 430], [780, 410],
-    ]
-    treePositions.forEach(([tx, ty]) => {
-      const h = 28 + (tx % 12)
-      const trunk = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
-      trunk.setAttribute('x', String(tx - 2))
-      trunk.setAttribute('y', String(ty - h * 0.3))
-      trunk.setAttribute('width', '4')
-      trunk.setAttribute('height', String(Math.ceil(h * 0.3)))
-      trunk.setAttribute('rx', '2')
-      trunk.setAttribute('fill', '#1a2a1a')
-      trees.appendChild(trunk)
+    const tileList = []
+    for (let col = 0; col < COLS; col++) {
+      for (let row = 0; row < ROWS; row++) {
+        tileList.push({ col, row })
+      }
+    }
+    tileList.sort((a, b) => zOrder(a.col, a.row) - zOrder(b.col, b.row))
 
-      const crown = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-      crown.setAttribute('d', `M${tx},${ty - h} L${tx - 8},${ty - h * 0.35} L${tx + 8},${ty - h * 0.35} Z`)
-      crown.setAttribute('fill', '#1a3a2a')
-      crown.setAttribute('stroke', '#1a3a2a')
-      crown.setAttribute('stroke-width', '3')
-      crown.setAttribute('stroke-linejoin', 'round')
-      trees.appendChild(crown)
+    // Organic noise overlay
+    const noiseRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+    noiseRect.setAttribute('x', '-100')
+    noiseRect.setAttribute('y', '-60')
+    noiseRect.setAttribute('width', '1100')
+    noiseRect.setAttribute('height', '650')
+    noiseRect.setAttribute('fill', '#000')
+    noiseRect.setAttribute('filter', 'url(#grass-noise)')
+    noiseRect.setAttribute('pointer-events', 'none')
+    svg.appendChild(noiseRect)
+
+    // Directional sunlight
+    const sunRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+    sunRect.setAttribute('x', '-100')
+    sunRect.setAttribute('y', '-60')
+    sunRect.setAttribute('width', '1100')
+    sunRect.setAttribute('height', '650')
+    sunRect.setAttribute('fill', 'url(#sunlight)')
+    sunRect.setAttribute('pointer-events', 'none')
+    svg.appendChild(sunRect)
+
+    // --- Layers 1-4: z-sorted per-tile rendering ---
+    const flowerColors = ['#fdd835', '#f48fb1', '#ce93d8', '#ef5350']
+
+    tileList.forEach(({ col, row }) => {
+      const pos = tileToScreen(col, row)
+      const deco = decoMap[`${col},${row}`]
+      const detail = detailMap[`${col},${row}`]
+      const clutterList = clutterByTile[`${col},${row}`]
+
+      // Grass diamond image + outline (not overlay tiles like road/water)
+      const isOverlay = deco && (deco.type === 'road' || deco.type === 'water' || deco.type === 'beach' || deco.type === 'dirt')
+      if (!isOverlay) {
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+        g.setAttribute('transform', `translate(${pos.x.toFixed(1)},${pos.y.toFixed(1)})`)
+
+        const grassImg = document.createElementNS('http://www.w3.org/2000/svg', 'image')
+        grassImg.setAttribute('href', resolveTileUrl('tiles/terrain/grassWhole.png'))
+        grassImg.setAttribute('x', (-hw).toFixed(1))
+        grassImg.setAttribute('y', (-hh).toFixed(1))
+        grassImg.setAttribute('width', String(TILE_W))
+        grassImg.setAttribute('height', String(TILE_H))
+        grassImg.setAttribute('clip-path', 'url(#iso-clip)')
+        g.appendChild(grassImg)
+
+        svg.appendChild(g)
+
+        const outline = document.createElementNS('http://www.w3.org/2000/svg', 'polygon')
+        outline.setAttribute('points', `0,${-hh} ${hw},0 0,${hh} ${-hw},0`)
+        outline.setAttribute('transform', `translate(${pos.x.toFixed(1)},${pos.y.toFixed(1)})`)
+        outline.setAttribute('fill', 'none')
+        outline.setAttribute('stroke', 'rgba(0,0,0,0.06)')
+        outline.setAttribute('stroke-width', '0.5')
+        svg.appendChild(outline)
+      }
+
+      // Phase 3: Ground clutter (tiny decorative elements on grass)
+      if (clutterList) {
+        clutterList.forEach(item => {
+          const cx = pos.x + ((col * 13 + row * 7) % 11) - 5
+          const cy = pos.y + ((col * 5 + row * 17) % 9) - 4
+          let fillColor, el
+          switch (item.type) {
+            case 'tuft':
+              fillColor = '#8bc34a'
+              el = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+              el.setAttribute('r', String(item.size))
+              break
+            case 'pebble':
+              fillColor = '#9e9e9e'
+              el = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+              el.setAttribute('r', String(item.size))
+              break
+            case 'flower': {
+              const fi = (col * 7 + row * 13) % flowerColors.length
+              fillColor = flowerColors[fi]
+              el = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+              el.setAttribute('r', String(item.size))
+              break
+            }
+            case 'leaf':
+              fillColor = '#8d6e63'
+              el = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse')
+              el.setAttribute('rx', String(item.size))
+              el.setAttribute('ry', String(item.size * 0.5))
+              el.setAttribute('transform', `rotate(${(col * 37 + row * 23) % 360}, ${cx.toFixed(1)}, ${cy.toFixed(1)})`)
+              break
+            default:
+              fillColor = '#8bc34a'
+              el = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+              el.setAttribute('r', '3')
+          }
+          el.setAttribute('cx', cx.toFixed(1))
+          el.setAttribute('cy', cy.toFixed(1))
+          el.setAttribute('fill', fillColor)
+          el.setAttribute('opacity', String(item.opacity))
+          svg.appendChild(el)
+        })
+      }
+
+      // Phase 2: terrain variation circles (grass patches, dirt, rocks)
+      if (detail) {
+        const dx = ((col * 7 + row * 13) % 9) - 4
+        const dy = (((col * 11 + row * 5) % 7) - 3)
+        let fillColor
+        switch (detail.type) {
+          case 'light': fillColor = '#9ec763'; break
+          case 'dark': fillColor = '#5c8030'; break
+          case 'dirt': fillColor = '#8b7355'; break
+          case 'rock': fillColor = '#7a7a7a'; break
+          default: fillColor = '#9ec763'
+        }
+        const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+        el.setAttribute('cx', (pos.x + dx).toFixed(1))
+        el.setAttribute('cy', (pos.y + dy).toFixed(1))
+        el.setAttribute('r', String(detail.radius))
+        el.setAttribute('fill', fillColor)
+        el.setAttribute('opacity', String(detail.opacity))
+        svg.appendChild(el)
+      }
+
+      // Phase 4: road edge dirt blending — small circles near diamond vertices
+      if (deco && deco.type === 'road') {
+        const edgeDirt = [
+          { dx: hw * 0.45, dy: 0, r: 5 },
+          { dx: -hw * 0.45, dy: 0, r: 5 },
+          { dx: 0, dy: hh * 0.45, r: 5 },
+          { dx: 0, dy: -hh * 0.45, r: 5 },
+        ]
+        edgeDirt.forEach(({ dx, dy, r }) => {
+          const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+          el.setAttribute('cx', (pos.x + dx).toFixed(1))
+          el.setAttribute('cy', (pos.y + dy).toFixed(1))
+          el.setAttribute('r', String(r))
+          el.setAttribute('fill', '#6b5a3e')
+          el.setAttribute('opacity', '0.18')
+          svg.appendChild(el)
+        })
+      }
+
+      // Phase 4: water edge blending
+      if (deco && deco.type === 'water') {
+        const edgeWet = [
+          { dx: hw * 0.45, dy: 0, r: 5 },
+          { dx: -hw * 0.45, dy: 0, r: 5 },
+          { dx: 0, dy: hh * 0.45, r: 5 },
+        ]
+        edgeWet.forEach(({ dx, dy, r }) => {
+          const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+          el.setAttribute('cx', (pos.x + dx).toFixed(1))
+          el.setAttribute('cy', (pos.y + dy).toFixed(1))
+          el.setAttribute('r', String(r))
+          el.setAttribute('fill', '#7a9a9b')
+          el.setAttribute('opacity', '0.15')
+          svg.appendChild(el)
+        })
+      }
+
+      // Layer 1: road / water / beach — diamond-clipped overlay
+      if (deco && (deco.type === 'road' || deco.type === 'water' || deco.type === 'beach' || deco.type === 'dirt')) {
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+        g.setAttribute('transform', `translate(${pos.x.toFixed(1)},${pos.y.toFixed(1)})`)
+
+        const img = document.createElementNS('http://www.w3.org/2000/svg', 'image')
+        img.setAttribute('href', resolveTileUrl(deco.sprite))
+        img.setAttribute('x', (-hw).toFixed(1))
+        img.setAttribute('y', (-hh).toFixed(1))
+        img.setAttribute('width', String(TILE_W))
+        img.setAttribute('height', String(TILE_H))
+        img.setAttribute('clip-path', 'url(#iso-clip)')
+        g.appendChild(img)
+
+        svg.appendChild(g)
+      }
+
+      // Phase 2: shadows under buildings and trees
+      if (deco && (deco.type === 'building' || deco.type === 'tree' || deco.type === 'conifer')) {
+        const isTree = deco.type === 'tree' || deco.type === 'conifer'
+        const shadowRx = isTree ? hw * 0.9 : hw * 0.7
+        const shadowRy = isTree ? hh * 0.45 : hh * 0.35
+        const shadowOff = hh
+        const ambRx = isTree ? hw * 1.2 : hw * 1.4
+        const ambRy = isTree ? hh * 0.55 : hh * 0.7
+
+        // Ambient occlusion (wide, soft)
+        const ambient = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse')
+        ambient.setAttribute('cx', pos.x.toFixed(1))
+        ambient.setAttribute('cy', (pos.y + shadowOff * 0.8).toFixed(1))
+        ambient.setAttribute('rx', ambRx.toFixed(1))
+        ambient.setAttribute('ry', ambRy.toFixed(1))
+        ambient.setAttribute('fill', 'url(#ambient-shadow)')
+        svg.appendChild(ambient)
+
+        // Contact shadow (tight, dark at center)
+        const shadow = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse')
+        shadow.setAttribute('cx', pos.x.toFixed(1))
+        shadow.setAttribute('cy', (pos.y + shadowOff).toFixed(1))
+        shadow.setAttribute('rx', shadowRx.toFixed(1))
+        shadow.setAttribute('ry', shadowRy.toFixed(1))
+        shadow.setAttribute('fill', 'url(#contact-shadow)')
+        svg.appendChild(shadow)
+      }
+
+      // Layer 4: buildings and trees — unclipped, bottom-center anchored
+      if (deco && (deco.type === 'building' || deco.type === 'tree' || deco.type === 'conifer')) {
+        const isTree = deco.type === 'tree' || deco.type === 'conifer'
+
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+        g.setAttribute('transform', `translate(${pos.x.toFixed(1)},${pos.y.toFixed(1)})`)
+
+        const decoImg = document.createElementNS('http://www.w3.org/2000/svg', 'image')
+        decoImg.setAttribute('href', resolveTileUrl(deco.sprite))
+
+        if (isTree) {
+          const treeW = 32
+          const treeH = 64
+          decoImg.setAttribute('x', (-treeW / 2).toFixed(1))
+          decoImg.setAttribute('y', (-treeH + hh).toFixed(1))
+          decoImg.setAttribute('width', String(treeW))
+          decoImg.setAttribute('height', String(treeH))
+        } else {
+          const decoH = TILE_H + hh
+          decoImg.setAttribute('x', (-hw).toFixed(1))
+          decoImg.setAttribute('y', (-decoH + hh).toFixed(1))
+          decoImg.setAttribute('width', String(TILE_W))
+          decoImg.setAttribute('height', String(decoH))
+        }
+
+        g.appendChild(decoImg)
+        svg.appendChild(g)
+      }
     })
-    svg.appendChild(trees)
 
     this.element.appendChild(svg)
     this.scenerySvg = svg
-    this.updateParallax(progress)
+    this.updateParallax(completed.length / stations.length)
   }
 
   updateParallax(progress) {
     if (!this.scenerySvg) return
     const p = Math.max(0, Math.min(progress, 1))
     this.scenerySvg.style.transform = `translateX(${-p * 40}px)`
-  }
-
-  renderSignage() {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-    svg.setAttribute('class', 'map-signage')
-    svg.setAttribute('viewBox', '0 0 800 500')
-    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet')
-
-    // Warning signs near curve apexes
-    const signs = [
-      { x: 680, y: 410, label: '!' },
-      { x: 120, y: 230, label: '!' },
-      { x: 320, y: 145, label: '!' },
-    ]
-
-    signs.forEach(({ x, y, label }) => {
-      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
-      // Pole
-      const pole = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
-      pole.setAttribute('x', String(x - 1.5))
-      pole.setAttribute('y', String(y))
-      pole.setAttribute('width', '3')
-      pole.setAttribute('height', '25')
-      pole.setAttribute('fill', '#94a3b8')
-      g.appendChild(pole)
-      // Triangle sign
-      const tri = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-      tri.setAttribute('d', `M${x},${y - 18} L${x - 9},${y - 2} L${x + 9},${y - 2} Z`)
-      tri.setAttribute('fill', '#f59e0b')
-      tri.setAttribute('stroke', '#1e293b')
-      tri.setAttribute('stroke-width', '1.5')
-      tri.setAttribute('stroke-linejoin', 'round')
-      g.appendChild(tri)
-      // Exclamation text
-      const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-      txt.setAttribute('x', String(x))
-      txt.setAttribute('y', String(y - 7))
-      txt.setAttribute('text-anchor', 'middle')
-      txt.setAttribute('fill', '#1e293b')
-      txt.setAttribute('font-size', '11')
-      txt.setAttribute('font-weight', 'bold')
-      txt.textContent = label
-      g.appendChild(txt)
-
-      svg.appendChild(g)
-    })
-
-    this.element.appendChild(svg)
   }
 
   renderPath(completed) {

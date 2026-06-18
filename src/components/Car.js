@@ -1,7 +1,7 @@
 import gsap from 'gsap'
 import { eventBus } from '../core/EventBus.js'
 import { audio } from '../core/AudioManager.js'
-import carSvg from '../assets/car.svg?raw'
+const CAR_SPRITE = new URL('../assets/vehicles/civilian/red/Sedan 1/carRed2_000.png', import.meta.url).href
 import { computeCubicControlPoints, cubicBezier, cubicBezierDerivative } from '../utils/bezier.js'
 
 const VIEWBOX_W = 800
@@ -23,7 +23,12 @@ class Car {
 
     this.body = document.createElement('div')
     this.body.className = 'car-body'
-    this.body.innerHTML = carSvg
+    const img = document.createElement('img')
+    img.src = CAR_SPRITE
+    img.style.width = '100%'
+    img.style.height = '100%'
+    img.style.objectFit = 'contain'
+    this.body.appendChild(img)
     this.element.appendChild(this.body)
 
     this.headlight = document.createElement('div')
