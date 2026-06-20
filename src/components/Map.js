@@ -303,11 +303,7 @@ class MapView {
         <stop offset="25%" stop-color="#7a623f"/>
         <stop offset="100%" stop-color="#3a2510"/>
       </linearGradient>
-      <linearGradient id="wall-grad-water" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#2a8aaa"/>
-        <stop offset="30%" stop-color="#1a5a7a"/>
-        <stop offset="100%" stop-color="#0a2a4a"/>
-      </linearGradient>
+
     `
     svg.appendChild(defs)
 
@@ -404,7 +400,7 @@ class MapView {
         svg.appendChild(g)
       }
 
-      addEdgeWallSegments(svg, col, row, pos, hw, hh, (waterSprite || riverSprite) ? 'wall-grad-water' : undefined)
+      addEdgeWallSegments(svg, col, row, pos, hw, hh, (waterSprite || riverSprite) ? 'wall-grad' : undefined)
 
       appendTileImage('tiles/terrain/grassWhole.png')
 
