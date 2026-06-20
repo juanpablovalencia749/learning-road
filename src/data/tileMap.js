@@ -13,7 +13,7 @@ function tile(col, row, sprite, type = 'grass', options = {}) {
 //         roadNE/NW/ES/SW = corner pieces connecting two adjacent edges
 const roadTiles = [
   // Row 1 (top, col 3→7): rightward (horizontal = NS sprite)
-  tile(3, 1, 'tiles/road/roadNS.png', 'road'),
+  tile(3, 1, 'tiles/road/endS.png', 'road'),
   tile(4, 1, 'tiles/road/roadNS.png', 'road'),
   tile(5, 1, 'tiles/road/roadNS.png', 'road'),
   tile(6, 1, 'tiles/road/roadNS.png', 'road'),
@@ -182,7 +182,6 @@ export function getSpritePaths() {
     'tiles/terrain/hillE.png',
     'tiles/terrain/hillN.png',
     'tiles/terrain/hillS.png',
-    'tiles/terrain/hillW.png',
     'tiles/terrain/hillNE.png',
     'tiles/terrain/hillNW.png',
     'tiles/terrain/hillES.png',

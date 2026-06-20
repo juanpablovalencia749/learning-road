@@ -63,7 +63,10 @@ function getTerrainReliefSprite(col, row) {
   if (col > 0 && cellHeight(col - 1, row) < h) dirs.push('W')
 
   if (dirs.length === 0) return null
-  if (dirs.length === 1) return `tiles/terrain/hill${dirs[0]}.png`
+  if (dirs.length === 1) {
+    if (dirs[0] === 'W') return null
+    return `tiles/terrain/hill${dirs[0]}.png`
+  }
 
   if (dirs.length === 2) {
     if (dirs.includes('N') && dirs.includes('E')) return 'tiles/terrain/hillNE.png'
@@ -149,7 +152,7 @@ function getBeachSprite(col, row) {
 
 function getTerrainSpriteHeight(sprite) {
   const name = sprite.split('/').pop().replace('.png', '')
-  if (name === 'hillS' || name === 'hillW' || name === 'hillSW') return 80
+  if (name === 'hillS' || name === 'hillSW') return 80
   if (name === 'slopeE' || name === 'slopeN') return 58
   return 65
 }
@@ -256,6 +259,7 @@ class MapView {
 
     this.unsubscribe = eventBus.on('store:changed', () => {
       this.stationComponents.forEach(s => s.render())
+      this.updateStationBounce()
       const completedNow = store.get('completedStations') || []
       this.renderProgress(completedNow)
     })
@@ -713,6 +717,17 @@ class MapView {
       station.onClick(() => this.boundHandler(station))
       this.element.appendChild(station.element)
       return station
+    })
+    this.updateStationBounce()
+  }
+
+  updateStationBounce() {
+    const completed = store.get('completedStations') || []
+    const nextStation = this.stationComponents.find(s =>
+      store.isUnlocked(s.index) && !completed.includes(s.id)
+    )
+    this.stationComponents.forEach(s => {
+      s.element.classList.toggle('station-bounce', s === nextStation)
     })
   }
 

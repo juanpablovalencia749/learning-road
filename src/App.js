@@ -6,11 +6,19 @@ import { guide } from './components/Guide.js'
 import { registerMinigame, getMinigame } from './minigames/registry.js'
 import WordSearch from './minigames/WordSearch/WordSearch.js'
 import Placeholder from './minigames/Placeholder.js'
+import EppDrag from './minigames/EppDrag/EppDrag.js'
+import SenalClasif from './minigames/SenalClasif/SenalClasif.js'
+import Quiz from './minigames/Quiz/Quiz.js'
+import Sequence from './minigames/Sequence/Sequence.js'
 import Modal from './components/Modal.js'
 import { stations } from './data/stations.js'
 
 registerMinigame('word-search', WordSearch)
 registerMinigame('placeholder', Placeholder)
+registerMinigame('epp-drag', EppDrag)
+registerMinigame('senal-clasif', SenalClasif)
+registerMinigame('quiz', Quiz)
+registerMinigame('sequence', Sequence)
 
 export default class App {
   init() {

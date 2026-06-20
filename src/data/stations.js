@@ -23,7 +23,7 @@ export const stations = [
     x: 525,
     y: 162.5,
     title: 'EPP',
-    type: 'placeholder',
+    type: 'epp-drag',
     lucideIcon: 'Shield',
     content: {
       theory: 'Los Elementos de Protección Personal (EPP) son la última barrera contra los riesgos laborales. Su uso correcto es obligatorio.',
@@ -39,7 +39,7 @@ export const stations = [
     x: 575,
     y: 195,
     title: 'Señalización',
-    type: 'placeholder',
+    type: 'senal-clasif',
     lucideIcon: 'Triangle',
     content: {
       theory: 'Las señales de seguridad se clasifican en: prohibición, obligación, advertencia, emergencia e información. Cada una tiene forma y color distintivos.',
@@ -55,7 +55,7 @@ export const stations = [
     x: 625,
     y: 227.5,
     title: 'Legislación SST',
-    type: 'placeholder',
+    type: 'quiz',
     lucideIcon: 'BookOpen',
     content: {
       theory: 'La legislación en SST establece derechos y deberes del empleador y del trabajador. Conocer tus responsabilidades es esencial.',
@@ -87,7 +87,7 @@ export const stations = [
     x: 575,
     y: 325,
     title: 'Trabajo en Alturas',
-    type: 'placeholder',
+    type: 'sequence',
     lucideIcon: 'Mountain',
     content: {
       theory: 'El trabajo en alturas requiere equipos certificados, puntos de anclaje y capacitación específica. Nunca se trabaja solo.',
@@ -119,7 +119,7 @@ export const stations = [
     x: 475,
     y: 260,
     title: 'Ergonomía',
-    type: 'placeholder',
+    type: 'quiz',
     lucideIcon: 'Monitor',
     content: {
       theory: 'La ergonomía adapta el trabajo a la persona. Una mala postura o movimientos repetitivos pueden causar lesiones musculoesqueléticas.',
@@ -199,7 +199,7 @@ export const stations = [
     x: 375,
     y: 325,
     title: 'Carga Manual',
-    type: 'placeholder',
+    type: 'sequence',
     lucideIcon: 'FileText',
     content: {
       theory: 'La manipulación manual de cargas puede causar lesiones de espalda. Usa la técnica correcta: piernas flexionadas, espalda recta, carga pegada al cuerpo.',
